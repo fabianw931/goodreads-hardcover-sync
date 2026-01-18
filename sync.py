@@ -118,17 +118,27 @@ def get_hardcover_library_ids():
 
 def search_hardcover_book_id(title, author, isbn=None):
     """
-    Searches Hardcover for a book ID using ISBN first (via Editions), then Strict Title.
+    Searches Hardcover for a book ID.
+    Strategy:
+    1. Check ISBN. Retrieve ALL books correctly linked to this ISBN. Pick the most popular one.
+    2. Check Title + Author.
+    3. Smart Comparison:
+       - If ISBN match is strong (popular), use it.
+       - If ISBN match is weak (unpopular) and Title match is strong (very popular), override ISBN.
+       - This protects against users adding duplicate/empty books with valid ISBNs.
     """
-    # 1. Try ISBN Match (via Editions table)
-    # The screenshot showed isbn_10 and isbn_13 are on the 'editions' table, not 'books'.
+    candidate_isbn = None
+    candidate_title = None
+
+    # --- 1. ISBN Search (Robust) ---
     if isbn:
         query = """
         query SearchByISBN($isbn:String!) {
-          editions(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}, limit: 1) {
+          editions(where: {_or: [{isbn_10: {_eq: $isbn}}, {isbn_13: {_eq: $isbn}}]}) {
             book {
               id
               title
+              users_count
             }
           }
         }
@@ -136,14 +146,30 @@ def search_hardcover_book_id(title, author, isbn=None):
         try:
             res = graphql_query(query, {'isbn': isbn})
             editions = res.get('data', {}).get('editions', [])
-            if editions and editions[0].get('book'):
-                found_book = editions[0]['book']
-                logger.info(f"Match found by ISBN: {found_book['title']} (ID: {found_book['id']})")
-                return found_book['id']
-        except Exception:
-            pass # Continue to title match
-    
-    # 2. Title Match (Exact - Full)
+            
+            isbn_matches = []
+            for ed in editions:
+                if ed.get('book'):
+                    isbn_matches.append(ed['book'])
+            
+            if isbn_matches:
+                # Sort by popularity (users_count desc)
+                isbn_matches.sort(key=lambda x: x.get('users_count') or 0, reverse=True)
+                candidate_isbn = isbn_matches[0]
+                logger.info(f"Best ISBN match: '{candidate_isbn['title']}' (ID: {candidate_isbn['id']}, Users: {candidate_isbn.get('users_count')})")
+        
+        except Exception as e:
+            logger.error(f"Search error (ISBN): {e}")
+            pass
+
+    # Optimization: If we have a VERY strong ISBN match, we might skip title search?
+    # But for safety (per user request), we probably want to compare if it's "weak".
+    # Let's say "Strong" is > 50 users.
+    if candidate_isbn and (candidate_isbn.get('users_count') or 0) > 100:
+        logger.info(f"ISBN match is strong (>100 users). Using ID {candidate_isbn['id']}.")
+        return candidate_isbn['id']
+
+    # --- 2. Title Match (Exact & Popularity Sorted) ---
     logger.debug(f"Searching for exact title: '{title}'")
     query = """
     query SearchBooks($title: String!) {
@@ -164,9 +190,9 @@ def search_hardcover_book_id(title, author, isbn=None):
         candidates = res.get('data', {}).get('books', [])
         
         if candidates:
-            valid_matches = []
+            # Filter for Author Match
+            valid_stats = [] # Store matches with their stats
             
-            # Iterate through candidates to find AUTHOR MATCH
             for match in candidates:
                 book_authors = []
                 if match.get('contributions'):
@@ -186,69 +212,76 @@ def search_hardcover_book_id(title, author, isbn=None):
                         break
                 
                 if is_author_match:
-                    valid_matches.append(match)
-                else:
-                    logger.debug(f"  -> Title matched ('{match['title']}') but Author '{author}' did not match {book_authors}.")
+                    valid_stats.append(match)
             
-            if valid_matches:
-                # Sort by users_count descending to pick the most popular (valid) book
-                # Default to 0 if users_count is None
-                valid_matches.sort(key=lambda x: x.get('users_count') or 0, reverse=True)
-                
-                best_match = valid_matches[0]
-                logger.info(f"Exact Title match found: '{best_match['title']}' (ID: {best_match['id']}, Users: {best_match.get('users_count')}) | Author Verified")
-                return best_match['id']
-                    
+            if valid_stats:
+                # They are already sorted by API, but let's be safe
+                valid_stats.sort(key=lambda x: x.get('users_count') or 0, reverse=True)
+                candidate_title = valid_stats[0]
+                logger.info(f"Best Title match: '{candidate_title['title']}' (ID: {candidate_title['id']}, Users: {candidate_title.get('users_count')})")
+
     except Exception as e:
-        logger.error(f"Search error (Exact Title): {e}")
+        logger.error(f"Search error (Title): {e}")
         pass
 
-    # 3. Title Match (Exact - Cleaned/Shortened)
-    # If full title fails, try stripping content after ':', '(', or '-'
-    # But MUST verify Author match to avoid false positives on generic titles.
+    # --- 3. Comparison / Decision Logic ---
+    
+    # Case A: Found both
+    if candidate_isbn and candidate_title:
+        count_isbn = candidate_isbn.get('users_count') or 0
+        count_title = candidate_title.get('users_count') or 0
+        
+        # If the ISBN match is the SAME book as the title match, easy.
+        if candidate_isbn['id'] == candidate_title['id']:
+            return candidate_isbn['id']
+
+        # If Title match is Significantly more popular than ISBN match (5x and abs diff > 10)
+        # It implies the ISBN points to a duplicate/obscure edition.
+        if count_title > (count_isbn * 5) and count_title > 10:
+            logger.warning(f"  OVERRIDE: ISBN match (ID {candidate_isbn['id']}, Users {count_isbn}) is much less popular than Title match (ID {candidate_title['id']}, Users {count_title}). Using Title match.")
+            return candidate_title['id']
+        else:
+            logger.info(f"  Keeping ISBN match (ID {candidate_isbn['id']}) over Title match (ID {candidate_title['id']}).")
+            return candidate_isbn['id']
+
+    # Case B: Only ISBN
+    if candidate_isbn:
+        return candidate_isbn['id']
+        
+    # Case C: Only Title
+    if candidate_title:
+        return candidate_title['id']
+
+    # --- 4. Short Title Fallback (Last Resort) ---
+    # Only if absolutely nothing found yet.
     for sep in [':', '(', '-']:
         if sep in title:
             short_title = title.split(sep)[0].strip()
             if len(short_title) < 4: 
-                continue # Skip if too short to be safe
+                continue 
                 
             logger.debug(f"Searching for short title: '{short_title}' (Split by '{sep}')")
             try:
-                res = graphql_query(query, {"title": short_title})
+                res = graphql_query(query, {"title": short_title}) # Re-using the same sorted query
                 candidates = res.get('data', {}).get('books', [])
                 
                 if candidates:
-                    match = candidates[0]
-                    # Note: We are not sorting short title matches by user count here for simplicity, 
-                    # as we take the first author match. Could apply similar logic if needed.
-                    
-                    # AUTHOR VERIFICATION
-                    book_authors = []
-                    if match.get('contributions'):
-                        for c in match['contributions']:
-                            if c.get('author') and c['author'].get('name'):
-                                book_authors.append(c['author']['name'])
-                    
-                    if not book_authors:
-                        logger.warning(f"  -> Match found ('{match['title']}') but no authors listed. Skipping safely.")
-                        continue
+                    for match in candidates:
+                         # Author Verification
+                        book_authors = []
+                        if match.get('contributions'):
+                            for c in match['contributions']:
+                                if c.get('author') and c['author'].get('name'):
+                                    book_authors.append(c['author']['name'])
+                        
+                        if not book_authors: continue
 
-                    # Fuzzy Match Author
-                    is_author_match = False
-                    for ba in book_authors:
-                        score = fuzz.token_sort_ratio(author.lower(), ba.lower())
-                        if score > 70:
-                            is_author_match = True
-                            break
-                    
-                    if is_author_match:
-                        logger.info(f"Short Title match found: '{match['title']}' (ID: {match['id']}) | Author Verified")
-                        return match['id']
-                    else:
-                        logger.warning(f"  -> Short Title matched ('{match['title']}') but Author '{author}' did not match {book_authors}. Skipping.")
-
-            except Exception as e:
-                logger.error(f"Search error: {e}")
+                        for ba in book_authors:
+                            score = fuzz.token_sort_ratio(author.lower(), ba.lower())
+                            if score > 70:
+                                logger.info(f"Short Title match found: '{match['title']}' (ID: {match['id']}, Users: {match.get('users_count')})")
+                                return match['id']
+            except Exception:
                 pass
 
     return None
