@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 venv/
+.DS_Store
+*.log
+introspect_api.py
+debug_*.py
+verify_*.py
