@@ -398,17 +398,17 @@ async function runSync() {
         // --- Checks ---
         // 1. ISBN Check
         if (entry.isbn13 && existingIsbns.has(entry.isbn13)) {
-            // Utils.log(`Skipping '${entry.title}' (ISBN match)`, "debug");
+            // Already cached - Silent skip
             continue;
         }
         // 2. Title Check
         if (existingTitles.has(entry.title.trim().toLowerCase())) {
-            // Utils.log(`Skipping '${entry.title}' (Title match)`, "debug");
+            // Already cached - Silent skip
             continue;
         }
 
         // --- New Book ---
-        Utils.log(`Processing: ${entry.title}`, "info");
+        Utils.log(`Found new book: ${entry.title}`, "info");
 
         // Parse Date
         let readDate = null;
@@ -422,30 +422,36 @@ async function runSync() {
         if (bookId) {
             // Double check ID
             if (bookIds.has(bookId)) {
-                 Utils.log(`-> Already in library (ID check).`, "warn");
+                 // Utils.log(`-> Already in library (ID check).`, "warn"); // Silent skip
                  continue;
             }
 
             // ADD
-            Utils.log(`-> Adding to Hardcover...`, "debug");
+            // Utils.log(`-> Adding to Hardcover...`, "debug");
             const userBookId = await addBookToHardcover(bookId, entry.user_rating, readDate);
             
             if (userBookId) {
-                Utils.log(`-> Success!`, "success");
+                Utils.log(`✅ Added: '${entry.title}'`, "success");
                 bookIds.add(bookId); // Update local cache
                 addedCount++;
                 
                 if (readDate) {
                     await addReadDate(userBookId, readDate);
                 }
+            } else {
+                 Utils.log(`❌ Failed to add: '${entry.title}'`, "error");
             }
         } else {
-            Utils.log(`-> No match found.`, "warn");
+            Utils.log(`⚠️ No match found for: '${entry.title}'`, "warn");
         }
         
         // Slight delay to be nice
         await new Promise(r => setTimeout(r, 500));
     }
     
-    Utils.log(`=== Sync Complete. Added ${addedCount} books. ===`, "success");
+    if (addedCount === 0) {
+        Utils.log("Sync Complete. No new books to add.", "success");
+    } else {
+        Utils.log(`=== Sync Complete. Added ${addedCount} books. ===`, "success");
+    }
 }
