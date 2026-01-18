@@ -6,6 +6,11 @@ on:
     - cron: '0 * * * *'
   # Allows you to run manually from GitHub Actions tab
   workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Number of books to check (0 for all)'
+        required: false
+        default: '10'
 
 jobs:
   sync_books:
@@ -30,4 +35,11 @@ jobs:
       env:
         GOODREADS_RSS_URL: ${{ secrets.GOODREADS_RSS_URL }}
         HARDCOVER_API_TOKEN: ${{ secrets.HARDCOVER_API_TOKEN }}
-      run: python sync.py
+      run: |
+        LIMIT="${{ inputs.limit }}"
+        if [ -z "$LIMIT" ]; then LIMIT="10"; fi
+        if [ "$LIMIT" = "0" ]; then
+          python sync.py
+        else
+          python sync.py --limit $LIMIT
+        fi
