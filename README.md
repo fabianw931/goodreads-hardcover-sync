@@ -39,14 +39,8 @@ HARDCOVER_API_TOKEN="your_hardcover_bearer_token"
 - Right-click and **Copy Link Address**.
 
 **2. Hardcover API Token:**
-- Go to [Hardcover.app](https://hardcover.app) and log in.
-- Open the Developer Tools (F12 or Right Click > Inspect).
-- Go to the **Network** tab.
-- Refresh the page or click a link (e.g., your Profile).
-- Look for a request to `graphql` (or any API request).
-- Click the request and view the **Headers** tab.
-- Look for `Authorization: Bearer eyJ...`.
-- Copy the long string starting with `eyJ...` (exclude "Bearer " if your `.env` logic handles it, but the script is smart enough to handle it either way).
+- Go to [https://hardcover.app/account/api](https://hardcover.app/account/api).
+- Copy your API Token.
 
 ### 3. Usage
 Run the script manually to sync your books.
