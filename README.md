@@ -8,6 +8,12 @@ A "set it and forget it" tool to sync Kindle reads to Hardcover.app automaticall
 3. When a new book appears, it searches **Hardcover.app** via API.
 4. It logs the book to your "Read" status on Hardcover, including the date read.
 
+> **Note:** The Goodreads RSS feed can be inconsistent (often missing ISBNs). To ensure accuracy, this script uses a **robust multi-step matching strategy**:
+> 1. Matches by **ISBN** (if available).
+> 2. Falls back to **Title & Author** fuzzy matching.
+> 3. Verifies the author to prevent mismatches (e.g., same title, different book).
+> 4. **Prevents Duplicates:** It *always* checks your Hardcover library first. If a book is already there (even if added manually using a different edition), it will skip it.
+
 ---
 
 ## Local Deployment
