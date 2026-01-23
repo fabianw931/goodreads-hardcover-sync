@@ -16,7 +16,26 @@ A "set it and forget it" tool to sync Kindle reads to Hardcover.app automaticall
 
 ---
 
-## Local Deployment
+## Option 1: Chrome Extension (Recommended)
+
+The easiest way to use this tool is via the included Chrome Extension. It requires **Zero Config** because it automatically detects your credentials if you are logged into Goodreads and Hardcover in your browser.
+
+### Installation
+1.  Open Chrome and navigate to `chrome://extensions/`.
+2.  Toggle **Developer mode** in the top right corner.
+3.  Click **Load unpacked** (top left).
+4.  Select the `extension/` folder inside this repository.
+
+### Usage
+1.  Click the **Hardcover Sync** icon in your browser toolbar.
+2.  If you are logged into Goodreads and Hardcover, you will see green **Detected** status lights.
+    *   *Note: If "Not Found", verify you are logged into `goodreads.com` and `hardcover.app` in other tabs.*
+3.  Click **Sync Now**.
+4.  The extension will scan your recent Goodreads "Read" shelf and add any missing books to Hardcover.
+
+---
+
+## Option 2: Local Deployment (Python Script)
 
 ### 1. Setup
 Clone the repository and set up your environment:
