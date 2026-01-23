@@ -105,6 +105,17 @@ async function runSync(tabId, isDryRun) {
                  continue;
             }
 
+            // Fuzzy Title Check (Avoid False Positives in Notification)
+            let isFuzzyMatch = false;
+            for (const existingTitle of existingTitles) {
+                if (Utils.tokenSortRatio(entry.title, existingTitle) > 90) {
+                    console.log(`[DryRun] Skipped '${entry.title}' (Fuzzy Cache Hit: '${existingTitle}')`);
+                    isFuzzyMatch = true;
+                    break;
+                }
+            }
+            if (isFuzzyMatch) continue;
+
             // It's a candidate!
             console.log(`[DryRun] Candidate Found: '${entry.title}'`);
             if (isDryRun) {
