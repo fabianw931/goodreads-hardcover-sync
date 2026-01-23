@@ -229,6 +229,7 @@ async function getHardcoverLibraryIds() {
 async function searchHardcoverBookId(title, author, isbn) {
     const candidates = {};
     const searchAndVerify = async (searchTitle, sourceLabel) => {
+        console.log(`[Search] ${sourceLabel}: '${searchTitle}'`);
         const query = `query SearchBooks($title: String!) { books(where: {title: {_eq: $title}}, limit: 50, order_by: {users_count: desc}) { id title users_count contributions { author { name } } } }`;
         const res = await graphqlQuery(query, { title: searchTitle });
         (res.data.books || []).forEach(bk => {
