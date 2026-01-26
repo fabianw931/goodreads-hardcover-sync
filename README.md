@@ -35,17 +35,15 @@ The easiest way to use this tool is via the included Chrome Extension. It requir
 
 ---
 
-## Option 2: Local Deployment (Python Script)
+## Option 2: Cloud / Local Script (Node.js)
 
 ### 1. Setup
-Clone the repository and set up your environment:
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/yourusername/kindle-sync.git
 cd kindle-sync
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+npm install
 ```
 
 ### 2. Configuration
@@ -70,29 +68,20 @@ HARDCOVER_API_TOKEN="your_hardcover_bearer_token"
 ### 3. Usage
 Run the script manually to sync your books.
 
-**Sync the last 10 books (Recommended for daily/hourly checks):**
+**Sync the last 10 books (Recommended):**
 ```bash
-python sync.py --limit 10
+npm run sync -- --limit 10
 ```
 
 **Sync ALL books (First run or full backfill):**
 ```bash
-python sync.py --limit 0
-# OR
-python sync.py
+npm run sync -- --limit 0
 ```
 
-**Dry Run (See what would happen without adding books):**
+**Dry Run (See what would happen):**
 ```bash
-python sync.py --dry-run
+npm run sync -- --dry-run
 ```
-
-**Verbose Mode (Debug logging):**
-```bash
-python sync.py --verbose
-```
-
----
 
 ## GitHub Actions Setup (Free)
 

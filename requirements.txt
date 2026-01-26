@@ -1,4 +1,0 @@
-feedparser
-requests
-python-dotenv
-thefuzz[speedup]
