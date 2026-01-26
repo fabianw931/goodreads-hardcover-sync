@@ -26,8 +26,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             syncButton.textContent = "Done";
             setTimeout(() => removeModal(), 5000);
         }
+    } else if (request.action === 'SHOW_SETUP_REQUIRED') {
+        createSetupModal(request.data);
     }
 });
+
+function createSetupModal(data) {
+    if (document.getElementById('hc-sync-modal-overlay')) return;
+
+    const missingItems = [];
+    if (data.missingHardcover) missingItems.push("Hardcover Token");
+    if (data.missingGoodreads) {
+        let msg = "Goodreads Connection";
+        if (data.goodreadsError) msg += ` (${data.goodreadsError})`;
+        missingItems.push(msg);
+    }
+
+    const html = `
+        <div id="hc-sync-header">
+            <span>Hardcover Sync</span>
+            <button id="hc-sync-close">×</button>
+        </div>
+        <div id="hc-sync-body">
+            <p class="hc-sync-text">
+                ⚠️ <strong>Sync Not Configured</strong><br>
+                Please open the extension popup to connect:
+                <br><span style="font-size: 0.9em; color: #ef4444;">Missing: ${missingItems.join(", ")}</span>
+            </p>
+            <button id="hc-btn-dismiss" class="hc-btn secondary">Dismiss</button>
+        </div>
+    `;
+
+    overlay = document.createElement('div');
+    overlay.id = 'hc-sync-modal-overlay';
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
+
+    document.getElementById('hc-sync-close').addEventListener('click', removeModal);
+    document.getElementById('hc-btn-dismiss').addEventListener('click', removeModal);
+}
 
 function createModal(data) {
     if (document.getElementById('hc-sync-modal-overlay')) return; // Already Open

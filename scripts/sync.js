@@ -13,7 +13,7 @@ async function main() {
     // 1. Get Config
     const RSS_URL = process.env.GOODREADS_RSS_URL;
     const HC_TOKEN = process.env.HARDCOVER_API_TOKEN;
-    const DRY_RUN = process.env.DRY_RUN === 'true';
+    const DRY_RUN = process.env.DRY_RUN === 'true' || process.argv.includes('--dry-run');
 
     if (!RSS_URL || !HC_TOKEN) {
         console.error("❌ Stats: Missing Configuration. Please set GOODREADS_RSS_URL and HARDCOVER_API_TOKEN.");

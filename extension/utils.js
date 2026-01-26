@@ -91,5 +91,14 @@ export const Utils = {
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
+    },
+
+    findRssLink: (html) => {
+        // Find URL containing "/review/list_rss/" inside quotes
+        // Matches: href="/review/list_rss/..." or "https://www.goodreads.com/review/list_rss/..."
+        // Captures the content inside the quotes
+        const regex = /["']([^"']*?\/review\/list_rss\/[^"']*?)["']/i;
+        const match = regex.exec(html);
+        return match ? match[1] : null;
     }
 };
