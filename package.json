@@ -1,7 +1,7 @@
 {
-  "name": "kindle-sync",
+  "name": "goodreads-hardcover-sync",
   "version": "1.0.0",
-  "description": "Sync Goodreads RSS to Hardcover.app",
+  "description": "Sync your Goodreads 'Read' shelf to Hardcover.app automatically.",
   "main": "scripts/sync.js",
   "type": "module",
   "scripts": {

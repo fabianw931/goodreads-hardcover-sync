@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Hardcover Kindle Sync",
+  "name": "Goodreads to Hardcover Sync",
   "version": "1.0",
   "description": "Sync your Goodreads 'Read' shelf to Hardcover.app automatically.",
   "permissions": [

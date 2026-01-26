@@ -1,4 +1,4 @@
-# Kindle (Goodreads) to Hardcover Sync
+# Goodreads to Hardcover Sync
 
 A "set it and forget it" tool to sync Kindle reads to Hardcover.app automatically.
 
